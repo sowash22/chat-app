@@ -1,3 +1,4 @@
+/* Hallmark · macrostructure: Workbench · tone: utilitarian · anchor hue: green */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,6 +30,23 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
+    --rail: #1c2430;
+    --rail-text: #f4f7fb;
+    --rail-muted: #d0d8e4;
+    --rail-hover: #2a3444;
+    --rail-line: #3d4b60;
+    --rail-field: #121820;
+    --paper: #f4f6f8;
+    --sheet: #ffffff;
+    --ink: #1c2430;
+    --quiet: #3e4c5f;
+    --line: #d5dde6;
+    --you: #115e59;
+    --you-hover: #0c4f4a;
+    --you-ink: #f4fffc;
+    --focus-on-rail: #b7f3e2;
+    --danger: #9f1239;
+    --danger-bg: #fff1f2;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -59,6 +77,10 @@
 }
 
 @layer base {
+  html,
+  body {
+    overflow-x: clip;
+  }
   * {
     @apply border-border;
   }

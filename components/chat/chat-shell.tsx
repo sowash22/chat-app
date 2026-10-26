@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { MessageSquareText } from "lucide-react";
-import { signOut } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/client";
 import {
   MESSAGE_PAGE_SIZE,
@@ -28,7 +26,7 @@ import { Thread } from "@/components/chat/thread";
 type Connection = "idle" | "connecting" | "live" | "reconnecting";
 
 const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--you)]";
 
 const connectionLabel: Record<Connection, string> = {
   idle: "Not connected",
@@ -37,12 +35,6 @@ const connectionLabel: Record<Connection, string> = {
   reconnecting: "Reconnecting",
 };
 
-const connectionDot: Record<Connection, string> = {
-  idle: "bg-slate-500",
-  connecting: "bg-amber-600 motion-safe:animate-pulse",
-  live: "bg-emerald-600",
-  reconnecting: "bg-amber-600 motion-safe:animate-pulse",
-};
 
 function bumpConversation(current: ConversationSummary[], conversationId: string) {
   const index = current.findIndex((item) => item.id === conversationId);
@@ -492,44 +484,18 @@ export function ChatShell({ me }: { me: Me }) {
 
   return (
     <div
-      className="flex h-dvh flex-col bg-slate-100 text-slate-950"
+      className="flex h-dvh flex-col bg-[var(--paper)] text-[var(--ink)]"
       style={{ colorScheme: "light" }}
     >
+      <h1 className="sr-only">Messages</h1>
       <a
         href="#workspace"
-        className={`sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-slate-950 focus:shadow-md ${focusRing}`}
+        className={`sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded-[10px] focus:bg-[var(--sheet)] focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[var(--ink)] ${focusRing}`}
       >
         Skip to conversations
       </a>
-      <header className="z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-blue-800 text-white">
-            <MessageSquareText className="size-4" aria-hidden />
-          </span>
-          <h1 className="truncate text-base font-semibold tracking-tight">Messages</h1>
-        </div>
-        <p
-          role="status"
-          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800"
-        >
-          <span
-            aria-hidden
-            className={`inline-block size-2.5 rounded-full ${connectionDot[connection]}`}
-          />
-          <span className="sm:hidden">{connectionLabel[connection]}</span>
-          <span className="hidden sm:inline">Connection: {connectionLabel[connection]}</span>
-        </p>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className={`inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`}
-          >
-            Sign out
-          </button>
-        </form>
-      </header>
 
-      <div id="workspace" className="grid min-h-0 flex-1 md:grid-cols-[20rem_minmax(0,1fr)]">
+      <div id="workspace" className="grid min-h-0 flex-1 md:grid-cols-[18rem_minmax(0,1fr)]">
         <Sidebar
           className={activeId ? "hidden md:flex" : "flex"}
           email={me.email}
@@ -554,7 +520,7 @@ export function ChatShell({ me }: { me: Me }) {
             setActionError(null);
             setActiveId(id);
           }}
-          listError={listError}
+          listError={active ? null : listError}
           channelName={channelName}
           onChannelNameChange={(value) => {
             setChannelName(value);
@@ -566,6 +532,8 @@ export function ChatShell({ me }: { me: Me }) {
           joiningId={joiningId}
           onJoinChannel={(channel) => void joinChannel(channel)}
           channelError={channelError}
+          connection={connection}
+          connectionText={connectionLabel[connection]}
         />
 
         {active ? (
@@ -594,20 +562,18 @@ export function ChatShell({ me }: { me: Me }) {
             onLeave={activeIsChannel ? () => void leaveChannel() : undefined}
             leaving={leaving}
             actionError={actionError}
+            listError={listError}
+            connection={connection}
+            connectionText={connectionLabel[connection]}
           />
         ) : (
           <section
             id="conversation"
-            className="hidden place-items-center bg-slate-100 p-6 md:grid"
+            className="hidden place-items-center bg-[var(--paper)] px-6 md:grid"
           >
-            <div className="max-w-sm rounded-xl border border-slate-200 bg-white px-6 py-8 text-center shadow-sm">
-              <p className="text-lg font-semibold tracking-tight text-slate-950">
-                Choose a conversation
-              </p>
-              <p className="mt-2 text-base leading-7 text-slate-600">
-                Select a channel or direct message, or start one from the sidebar.
-              </p>
-            </div>
+            <p className="max-w-sm text-center text-lg font-medium leading-7 text-[var(--ink)]">
+              Pick a channel or a person.
+            </p>
           </section>
         )}
       </div>

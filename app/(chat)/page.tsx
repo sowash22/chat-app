@@ -6,16 +6,10 @@ export default function ChatPage() {
     <Suspense
       fallback={
         <div
-          className="grid h-dvh place-items-center bg-slate-100 px-6 text-base text-slate-700"
+          className="grid h-dvh place-items-center bg-[var(--paper)] px-6 text-base text-[var(--quiet)]"
           aria-live="polite"
         >
-          <p className="flex items-center gap-3">
-            <span
-              aria-hidden
-              className="size-2.5 rounded-full bg-blue-800 motion-safe:animate-pulse"
-            />
-            Loading chat…
-          </p>
+          <p>Loading chat…</p>
         </div>
       }
     >
