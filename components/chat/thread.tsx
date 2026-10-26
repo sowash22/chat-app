@@ -4,7 +4,9 @@ import { useLayoutEffect, useRef } from "react";
 import type { ChatMessage } from "@/lib/chat/types";
 
 const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800";
+
+const quietButton = `inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`;
 
 type ThreadProps = {
   conversationId: string;
@@ -126,30 +128,36 @@ export function Thread({
   }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-neutral-50">
-      <div className="border-b border-neutral-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-3">
+    <section id="conversation" className="flex min-h-0 min-w-0 flex-1 flex-col bg-slate-100">
+      <div className="border-b border-slate-200 bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={onBack}
-            className={`rounded-md px-2 py-1 text-sm font-medium text-sky-800 md:hidden ${focusRing}`}
+            className={`inline-flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-sm font-semibold text-blue-800 hover:bg-blue-50 motion-safe:transition-colors motion-safe:duration-200 md:hidden ${focusRing}`}
           >
             All conversations
           </button>
-          <h2 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h2>
+          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-slate-950">
+            {title}
+          </h2>
           {onLeave ? (
             <button
               type="button"
               onClick={onLeave}
               disabled={leaving}
-              className={`shrink-0 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60 ${focusRing}`}
+              aria-busy={leaving}
+              className={`shrink-0 ${quietButton}`}
             >
               {leaving ? "Leaving…" : "Leave channel"}
             </button>
           ) : null}
         </div>
         {actionError ? (
-          <p role="alert" className="pt-2 text-sm text-red-700">
+          <p
+            role="alert"
+            className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-800"
+          >
             {actionError}
           </p>
         ) : null}
@@ -169,7 +177,8 @@ export function Thread({
               type="button"
               onClick={() => void loadEarlier()}
               disabled={loadingEarlier}
-              className={`rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-neutral-100 disabled:opacity-60 ${focusRing}`}
+              aria-busy={loadingEarlier}
+              className={quietButton}
             >
               {loadingEarlier ? "Loading earlier messages…" : "Load earlier messages"}
             </button>
@@ -177,11 +186,24 @@ export function Thread({
         ) : null}
 
         {loading && messages.length === 0 ? (
-          <p className="text-sm text-neutral-600">Loading messages…</p>
+          <div className="space-y-3">
+            <div
+              aria-hidden
+              className="h-16 max-w-xs rounded-2xl rounded-bl-md bg-slate-200 motion-safe:animate-pulse"
+            />
+            <div
+              aria-hidden
+              className="ml-auto h-16 max-w-xs rounded-2xl rounded-br-md bg-slate-200 motion-safe:animate-pulse"
+            />
+            <p className="text-base text-slate-700">Loading messages…</p>
+          </div>
         ) : null}
 
         {!loading && messages.length === 0 ? (
-          <p className="text-sm text-neutral-600">No messages yet. Say hello.</p>
+          <div className="mx-auto mt-10 max-w-sm rounded-xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center shadow-sm">
+            <p className="text-base font-semibold text-slate-950">No messages yet</p>
+            <p className="mt-1 text-base leading-7 text-slate-600">Say hello.</p>
+          </div>
         ) : null}
 
         {messages.map((message) => {
@@ -193,40 +215,46 @@ export function Thread({
               className={`flex ${mine ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`flex max-w-[80%] flex-col gap-1 ${
+                className={`flex max-w-[min(80%,36rem)] flex-col gap-1 ${
                   mine ? "items-end" : "items-start"
                 }`}
               >
                 {label ? (
-                  <p className="px-0.5 text-xs font-medium leading-4 text-neutral-700">
+                  <p className="px-1 text-sm font-semibold leading-5 text-slate-700">
                     {label}
                   </p>
                 ) : null}
                 <div
-                  className={`rounded-lg px-3 py-2 text-sm ${
+                  className={`rounded-2xl px-3.5 py-2.5 text-base leading-relaxed shadow-sm ${
                     mine
-                      ? "bg-sky-800 text-white"
-                      : "border border-neutral-200 bg-white text-neutral-950"
-                  } ${message.status === "failed" ? "ring-2 ring-red-700" : ""}`}
+                      ? "rounded-br-md bg-blue-800 text-white"
+                      : "rounded-bl-md border border-slate-200 bg-white text-slate-950"
+                  } ${
+                    message.status === "failed"
+                      ? "ring-2 ring-red-700 ring-offset-2 ring-offset-slate-100"
+                      : ""
+                  }`}
                 >
                   <p className="whitespace-pre-wrap break-words">{message.content}</p>
                   <p
-                    className={`mt-1 flex flex-wrap items-center gap-2 text-xs ${
-                      mine ? "text-sky-100" : "text-neutral-500"
+                    className={`mt-1.5 flex flex-wrap items-center gap-2 text-xs font-medium ${
+                      mine ? "text-blue-100" : "text-slate-600"
                     }`}
                   >
                     <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
-                    {mine && message.status === "pending" ? <span>Sending</span> : null}
+                    {mine && message.status === "pending" ? (
+                      <span className="motion-safe:animate-pulse">Sending</span>
+                    ) : null}
                     {mine && message.status === "sent" ? <span>Sent</span> : null}
                     {message.status === "failed" ? (
-                      <span className={mine ? "text-white" : "text-red-700"}>Not sent</span>
+                      <span className={mine ? "text-white" : "text-red-800"}>Not sent</span>
                     ) : null}
                   </p>
                   {message.status === "failed" ? (
                     <button
                       type="button"
                       onClick={() => onRetry(message)}
-                      className={`mt-2 rounded-md bg-white px-2 py-1 text-xs font-medium text-red-800 ${focusRing}`}
+                      className={`mt-2 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-3 text-sm font-semibold text-red-800 shadow-sm hover:bg-red-50 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`}
                     >
                       Retry
                     </button>
@@ -239,23 +267,24 @@ export function Thread({
       </div>
 
       <form
-        className="border-t border-neutral-200 bg-white p-3"
+        className="border-t border-slate-200 bg-white px-4 py-3"
         onSubmit={(event) => {
           event.preventDefault();
           submit();
         }}
       >
-        <label htmlFor="composer" className="text-sm font-medium text-neutral-900">
+        <label htmlFor="composer" className="text-sm font-semibold text-slate-900">
           Message
         </label>
-        <div className="mt-1.5 flex items-end gap-2">
+        <div className="mt-2 flex items-end gap-2">
           <textarea
             id="composer"
             ref={draftInputRef}
             rows={2}
             maxLength={4000}
             placeholder="Write a message"
-            className={`min-h-16 flex-1 resize-y rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-950 shadow-sm ${focusRing}`}
+            aria-describedby="composer-hint"
+            className={`min-h-16 flex-1 resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-base leading-6 text-slate-950 shadow-sm placeholder:text-slate-600 ${focusRing}`}
             onChange={(event) => {
               draftRef.current = event.target.value;
             }}
@@ -268,11 +297,14 @@ export function Thread({
           />
           <button
             type="submit"
-            className={`rounded-md bg-sky-800 px-4 py-2 text-sm font-medium text-white hover:bg-sky-900 ${focusRing}`}
+            className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-blue-800 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-900 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`}
           >
             Send
           </button>
         </div>
+        <p id="composer-hint" className="mt-2 text-sm leading-6 text-slate-600">
+          Press Enter to send. Shift+Enter adds a new line.
+        </p>
       </form>
     </section>
   );

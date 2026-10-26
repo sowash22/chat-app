@@ -5,9 +5,15 @@ import { CHANNEL_NAME_MAX, conversationTitle } from "@/lib/chat/messages";
 import type { ConversationSummary, Person, PublicChannel } from "@/lib/chat/types";
 
 const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800";
 
-const fieldClass = `w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-950 shadow-sm ${focusRing}`;
+const fieldClass = `min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-950 shadow-sm placeholder:text-slate-600 ${focusRing}`;
+
+const secondaryButton = `inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`;
+
+const primaryButton = `inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-800 px-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-blue-800 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`;
+
+const rowButton = `flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg border-l-4 px-2.5 py-2 text-left text-sm leading-5 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 motion-safe:transition-colors motion-safe:duration-200 ${focusRing}`;
 
 type SidebarProps = {
   email: string;
@@ -37,6 +43,23 @@ type SidebarProps = {
   channelError: string | null;
   className?: string;
 };
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "");
+  return letters.join("") || "?";
+}
+
+function Mark({ children }: { children: string }) {
+  return (
+    <span
+      aria-hidden
+      className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-800"
+    >
+      {children}
+    </span>
+  );
+}
 
 export function Sidebar({
   email,
@@ -73,38 +96,46 @@ export function Sidebar({
   const discoverable = directory.filter((channel) => !channel.joined);
 
   return (
-    <aside className={`flex min-h-0 flex-col border-r border-neutral-200 bg-white ${className ?? ""}`}>
-      <form onSubmit={onSaveDisplayName} className="grid gap-1.5 border-b border-neutral-200 p-3">
-        <label htmlFor="display-name" className="text-sm font-medium">
+    <aside
+      className={`flex min-h-0 flex-col border-r border-slate-200 bg-white ${className ?? ""}`}
+    >
+      <form onSubmit={onSaveDisplayName} className="grid gap-2 border-b border-slate-200 p-4">
+        <label htmlFor="display-name" className="text-sm font-semibold text-slate-900">
           Display name
         </label>
-        <div className="flex gap-2">
-          <input
-            id="display-name"
-            value={displayName}
-            onChange={(event) => onDisplayNameChange(event.target.value)}
-            maxLength={40}
-            className={fieldClass}
-          />
-          <button
-            type="submit"
-            disabled={savingName}
-            className={`shrink-0 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-60 ${focusRing}`}
-          >
-            {savingName ? "Saving…" : "Save name"}
-          </button>
-        </div>
-        <p className="truncate text-xs text-neutral-500">{email}</p>
+        <input
+          id="display-name"
+          value={displayName}
+          onChange={(event) => onDisplayNameChange(event.target.value)}
+          maxLength={40}
+          className={fieldClass}
+        />
+        <button
+          type="submit"
+          disabled={savingName}
+          aria-busy={savingName}
+          className={secondaryButton}
+        >
+          {savingName ? "Saving…" : "Save name"}
+        </button>
+        <p className="truncate text-sm text-slate-600">{email}</p>
         {nameError ? (
-          <p role="alert" className="text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-800"
+          >
             {nameError}
           </p>
         ) : null}
-        {nameMessage ? <p className="text-sm text-emerald-800">{nameMessage}</p> : null}
+        {nameMessage ? (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900">
+            {nameMessage}
+          </p>
+        ) : null}
       </form>
 
-      <div className="grid gap-1.5 border-b border-neutral-200 p-3">
-        <label htmlFor="people-search" className="text-sm font-medium">
+      <div className="grid gap-2 border-b border-slate-200 p-4">
+        <label htmlFor="people-search" className="text-sm font-semibold text-slate-900">
           Find people
         </label>
         <input
@@ -115,45 +146,52 @@ export function Sidebar({
           placeholder="Search by name"
           className={fieldClass}
         />
-        <p className="text-xs text-neutral-500" aria-live="polite">
+        <p className="text-sm text-slate-600" aria-live="polite">
           {searching
             ? "Searching…"
             : `${people.length} ${people.length === 1 ? "person" : "people"}`}
         </p>
-        <ul aria-label="People" className="max-h-40 space-y-1 overflow-y-auto">
+        <ul aria-label="People" className="max-h-48 space-y-2 overflow-y-auto">
           {people.map((person) => (
             <li key={person.userId}>
               <button
                 type="button"
                 onClick={() => onOpenPerson(person)}
                 disabled={openingId === person.userId}
-                className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-neutral-100 disabled:opacity-60 ${focusRing}`}
+                aria-busy={openingId === person.userId}
+                className={`${rowButton} border-transparent text-slate-900`}
               >
-                {openingId === person.userId
-                  ? `Opening conversation with ${person.displayName}…`
-                  : `Message ${person.displayName}`}
+                <Mark>{initials(person.displayName)}</Mark>
+                <span className="min-w-0">
+                  {openingId === person.userId
+                    ? `Opening conversation with ${person.displayName}…`
+                    : `Message ${person.displayName}`}
+                </span>
               </button>
             </li>
           ))}
         </ul>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {listError ? (
-          <p role="alert" className="px-2 py-1 text-sm text-red-700">
+          <p
+            role="alert"
+            className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-800"
+          >
             {listError}
           </p>
         ) : null}
 
-        <section aria-labelledby="channels-heading" className="pb-3">
+        <section aria-labelledby="channels-heading" className="pb-4">
           <h2
             id="channels-heading"
-            className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-500"
+            className="px-2 py-1 text-sm font-semibold uppercase tracking-wide text-slate-600"
           >
             Channels
           </h2>
-          <form onSubmit={onCreateChannel} className="grid gap-1.5 px-2 py-1">
-            <label htmlFor="channel-name" className="text-sm font-medium">
+          <form onSubmit={onCreateChannel} className="grid gap-2 px-2 py-2">
+            <label htmlFor="channel-name" className="text-sm font-semibold text-slate-900">
               Channel name
             </label>
             <input
@@ -167,64 +205,75 @@ export function Sidebar({
             <button
               type="submit"
               disabled={creatingChannel}
-              className={`justify-self-start rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-60 ${focusRing}`}
+              aria-busy={creatingChannel}
+              className={primaryButton}
             >
               {creatingChannel ? "Creating…" : "Create channel"}
             </button>
           </form>
           {channelError ? (
-            <p role="alert" className="px-2 py-1 text-sm text-red-700">
+            <p
+              role="alert"
+              className="mx-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-800"
+            >
               {channelError}
             </p>
           ) : null}
 
-          <h3 className="px-2 pt-2 text-sm font-medium text-neutral-800">
+          <h3 className="px-2 pt-4 text-sm font-semibold text-slate-800">
             Public channels
           </h3>
           {discoverable.length === 0 ? (
-            <p className="px-2 py-1 text-sm text-neutral-600">
+            <p className="px-2 py-2 text-sm leading-6 text-slate-600">
               No public channels to join.
             </p>
           ) : (
-            <ul aria-label="Public channels" className="space-y-1">
+            <ul aria-label="Public channels" className="space-y-2">
               {discoverable.map((channel) => (
                 <li key={channel.id}>
                   <button
                     type="button"
                     onClick={() => onJoinChannel(channel)}
                     disabled={joiningId === channel.id}
-                    className={`w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-neutral-100 disabled:opacity-60 ${focusRing}`}
+                    aria-busy={joiningId === channel.id}
+                    className={`${rowButton} border-transparent font-medium text-slate-900`}
                   >
-                    {joiningId === channel.id
-                      ? `Joining #${channel.name}…`
-                      : `Join #${channel.name}`}
+                    <span className="min-w-0">
+                      {joiningId === channel.id
+                        ? `Joining #${channel.name}…`
+                        : `Join #${channel.name}`}
+                    </span>
                   </button>
                 </li>
               ))}
             </ul>
           )}
 
+          <h3 id="your-channels-heading" className="px-2 pt-4 text-sm font-semibold text-slate-800">
+            Your channels
+          </h3>
           {channels.length === 0 ? (
-            <p className="px-2 py-2 text-sm text-neutral-600">
+            <p className="px-2 py-2 text-sm leading-6 text-slate-600">
               You have not joined a channel yet.
             </p>
           ) : (
-            <ul aria-label="Your channels" className="space-y-1">
+            <ul aria-labelledby="your-channels-heading" className="space-y-2">
               {channels.map((conversation) => {
                 const selected = conversation.id === activeId;
+                const title = conversationTitle(conversation);
                 return (
                   <li key={conversation.id}>
                     <button
                       type="button"
                       onClick={() => onSelectConversation(conversation.id)}
                       aria-current={selected ? "true" : undefined}
-                      className={`w-full rounded-md border-l-4 px-3 py-2 text-left text-sm hover:bg-neutral-100 ${
+                      className={`${rowButton} ${
                         selected
-                          ? "border-sky-800 bg-sky-50 font-semibold"
-                          : "border-transparent"
-                      } ${focusRing}`}
+                          ? "border-blue-800 bg-blue-50 font-semibold text-blue-950"
+                          : "border-transparent text-slate-900"
+                      }`}
                     >
-                      {conversationTitle(conversation)}
+                      <span className="min-w-0 truncate">{title}</span>
                     </button>
                   </li>
                 );
@@ -236,31 +285,33 @@ export function Sidebar({
         <section aria-labelledby="direct-messages-heading">
           <h2
             id="direct-messages-heading"
-            className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-500"
+            className="px-2 py-1 text-sm font-semibold uppercase tracking-wide text-slate-600"
           >
             Direct messages
           </h2>
           {directMessages.length === 0 ? (
-            <p className="px-2 py-2 text-sm text-neutral-600">
+            <p className="px-2 py-2 text-sm leading-6 text-slate-600">
               No direct messages yet. Search for someone to start one.
             </p>
           ) : (
-            <ul aria-label="Direct messages" className="space-y-1">
+            <ul aria-label="Direct messages" className="space-y-2">
               {directMessages.map((conversation) => {
                 const selected = conversation.id === activeId;
+                const title = conversationTitle(conversation);
                 return (
                   <li key={conversation.id}>
                     <button
                       type="button"
                       onClick={() => onSelectConversation(conversation.id)}
                       aria-current={selected ? "true" : undefined}
-                      className={`w-full rounded-md border-l-4 px-3 py-2 text-left text-sm hover:bg-neutral-100 ${
+                      className={`${rowButton} ${
                         selected
-                          ? "border-sky-800 bg-sky-50 font-semibold"
-                          : "border-transparent"
-                      } ${focusRing}`}
+                          ? "border-blue-800 bg-blue-50 font-semibold text-blue-950"
+                          : "border-transparent text-slate-900"
+                      }`}
                     >
-                      {conversationTitle(conversation)}
+                      <Mark>{initials(title)}</Mark>
+                      <span className="min-w-0 truncate">{title}</span>
                     </button>
                   </li>
                 );
