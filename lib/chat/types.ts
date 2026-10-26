@@ -28,6 +28,7 @@ export type ChatMessage = {
   id: string;
   conversationId: string;
   senderId: string;
+  senderDisplayName: string | null;
   clientMessageId: string;
   sequence: number;
   content: string;

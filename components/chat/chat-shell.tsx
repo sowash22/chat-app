@@ -72,8 +72,18 @@ export function ChatShell({ me }: { me: Me }) {
   const [outgoingToken, setOutgoingToken] = useState(0);
   const messagesRef = useRef(messagesById);
   const activeIdRef = useRef(activeId);
+  const displayNameRef = useRef(displayName);
+  const senderNamesRef = useRef(new Map<string, string>());
   messagesRef.current = messagesById;
   activeIdRef.current = activeId;
+  displayNameRef.current = displayName;
+
+  function rememberSenderNames(messages: ChatMessage[]) {
+    for (const message of messages) {
+      const name = message.senderDisplayName?.trim();
+      if (name) senderNamesRef.current.set(message.senderId, name);
+    }
+  }
 
   function updateMessages(
     conversationId: string,
@@ -169,6 +179,7 @@ export function ChatShell({ me }: { me: Me }) {
         cursor = last.sequence;
       }
       if (cancelled || incoming.length === 0) return;
+      rememberSenderNames(incoming);
       updateMessages(conversationId, (current) => mergeMessages(current, incoming));
       setConversations((current) => bumpConversation(current, conversationId));
     }
@@ -181,6 +192,7 @@ export function ChatShell({ me }: { me: Me }) {
           `/api/conversations/${conversationId}/messages`,
         );
         if (cancelled) return;
+        rememberSenderNames(data.messages);
         updateMessages(conversationId, (current) =>
           replaceWithLatest(current, data.messages),
         );
@@ -216,8 +228,12 @@ export function ChatShell({ me }: { me: Me }) {
           (payload) => {
             const message = messageFromRealtime(payload.new);
             if (!message || message.conversationId !== conversationId) return;
-            updateMessages(conversationId, (current) => mergeMessages(current, [message]));
-            setConversations((current) => bumpConversation(current, conversationId));
+            void namedRealtimeMessage(message).then((named) => {
+              if (cancelled) return;
+              rememberSenderNames([named]);
+              updateMessages(conversationId, (current) => mergeMessages(current, [named]));
+              setConversations((current) => bumpConversation(current, conversationId));
+            });
           },
         )
         .subscribe((status) => {
@@ -233,6 +249,26 @@ export function ChatShell({ me }: { me: Me }) {
             setConnection("reconnecting");
           }
         });
+    }
+
+    async function namedRealtimeMessage(message: ChatMessage) {
+      if (message.senderId === me.userId) {
+        const ownName = displayNameRef.current.trim();
+        return { ...message, senderDisplayName: ownName || null };
+      }
+      const cached = senderNamesRef.current.get(message.senderId);
+      if (cached) return { ...message, senderDisplayName: cached };
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", message.senderId)
+        .maybeSingle();
+      if (error || typeof data?.display_name !== "string") {
+        return { ...message, senderDisplayName: null };
+      }
+      const name = data.display_name.trim();
+      if (name) senderNamesRef.current.set(message.senderId, name);
+      return { ...message, senderDisplayName: name || null };
     }
 
     void start();
@@ -383,6 +419,7 @@ export function ChatShell({ me }: { me: Me }) {
           id: `local:${clientMessageId}`,
           conversationId,
           senderId: me.userId,
+          senderDisplayName: displayName.trim() || null,
           clientMessageId,
           sequence: 0,
           content,
@@ -400,6 +437,7 @@ export function ChatShell({ me }: { me: Me }) {
           body: JSON.stringify({ clientMessageId, content }),
         },
       );
+      rememberSenderNames([message]);
       updateMessages(conversationId, (current) => mergeMessages(current, [message]));
       setConversations((current) => bumpConversation(current, conversationId));
     } catch {
@@ -425,6 +463,7 @@ export function ChatShell({ me }: { me: Me }) {
       const data = await apiFetch<{ messages: ChatMessage[] }>(
         `/api/conversations/${conversationId}/messages?beforeSequence=${oldest.sequence}`,
       );
+      rememberSenderNames(data.messages);
       updateMessages(conversationId, (current) => mergeMessages(current, data.messages));
       const done = data.messages.length < MESSAGE_PAGE_SIZE;
       setExhausted((current) => ({ ...current, [conversationId]: done }));
@@ -522,6 +561,7 @@ export function ChatShell({ me }: { me: Me }) {
                 : `Messages with ${activeTitle}`
             }
             meId={me.userId}
+            showSenderNames={activeIsChannel}
             messages={messages}
             loading={loadingId === active.id}
             canLoadEarlier={!exhausted[active.id] && sentCount > 0}

@@ -10,6 +10,7 @@ type ThreadProps = {
   conversationId: string;
   title: string;
   meId: string;
+  showSenderNames?: boolean;
   messages: ChatMessage[];
   loading: boolean;
   canLoadEarlier: boolean;
@@ -25,6 +26,12 @@ type ThreadProps = {
   logLabel?: string;
 };
 
+function senderLabel(message: ChatMessage) {
+  const name = message.senderDisplayName?.trim();
+  if (name) return name;
+  return message.senderId.slice(0, 8);
+}
+
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -38,6 +45,7 @@ export function Thread({
   conversationId,
   title,
   meId,
+  showSenderNames = false,
   messages,
   loading,
   canLoadEarlier,
@@ -178,40 +186,52 @@ export function Thread({
 
         {messages.map((message) => {
           const mine = message.senderId === meId;
+          const label = showSenderNames && !mine ? senderLabel(message) : null;
           return (
             <article
               key={message.clientMessageId}
               className={`flex ${mine ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                  mine
-                    ? "bg-sky-800 text-white"
-                    : "border border-neutral-200 bg-white text-neutral-950"
-                } ${message.status === "failed" ? "ring-2 ring-red-700" : ""}`}
+                className={`flex max-w-[80%] flex-col gap-1 ${
+                  mine ? "items-end" : "items-start"
+                }`}
               >
-                <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                <p
-                  className={`mt-1 flex flex-wrap items-center gap-2 text-xs ${
-                    mine ? "text-sky-100" : "text-neutral-500"
-                  }`}
-                >
-                  <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
-                  {mine && message.status === "pending" ? <span>Sending</span> : null}
-                  {mine && message.status === "sent" ? <span>Sent</span> : null}
-                  {message.status === "failed" ? (
-                    <span className={mine ? "text-white" : "text-red-700"}>Not sent</span>
-                  ) : null}
-                </p>
-                {message.status === "failed" ? (
-                  <button
-                    type="button"
-                    onClick={() => onRetry(message)}
-                    className={`mt-2 rounded-md bg-white px-2 py-1 text-xs font-medium text-red-800 ${focusRing}`}
-                  >
-                    Retry
-                  </button>
+                {label ? (
+                  <p className="px-0.5 text-xs font-medium leading-4 text-neutral-700">
+                    {label}
+                  </p>
                 ) : null}
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    mine
+                      ? "bg-sky-800 text-white"
+                      : "border border-neutral-200 bg-white text-neutral-950"
+                  } ${message.status === "failed" ? "ring-2 ring-red-700" : ""}`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  <p
+                    className={`mt-1 flex flex-wrap items-center gap-2 text-xs ${
+                      mine ? "text-sky-100" : "text-neutral-500"
+                    }`}
+                  >
+                    <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
+                    {mine && message.status === "pending" ? <span>Sending</span> : null}
+                    {mine && message.status === "sent" ? <span>Sent</span> : null}
+                    {message.status === "failed" ? (
+                      <span className={mine ? "text-white" : "text-red-700"}>Not sent</span>
+                    ) : null}
+                  </p>
+                  {message.status === "failed" ? (
+                    <button
+                      type="button"
+                      onClick={() => onRetry(message)}
+                      className={`mt-2 rounded-md bg-white px-2 py-1 text-xs font-medium text-red-800 ${focusRing}`}
+                    >
+                      Retry
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </article>
           );

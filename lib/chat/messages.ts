@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatMessage, ConversationSummary, MessageRow } from "@/lib/chat/types";
 
 export { CHANNEL_NAME_MAX, invalidChannelName } from "@/lib/chat/channel-name";
@@ -9,11 +10,59 @@ export function messageFromRow(row: MessageRow): ChatMessage {
     id: row.id,
     conversationId: row.conversation_id,
     senderId: row.sender_id,
+    senderDisplayName: null,
     clientMessageId: row.client_message_id,
     sequence: Number(row.sequence),
     content: row.content,
     createdAt: row.created_at,
     status: "sent",
+  };
+}
+
+function trimmedName(value: string | null | undefined) {
+  const name = value?.trim();
+  return name ? name : null;
+}
+
+export function keepSenderDisplayName(
+  incoming: string | null | undefined,
+  existing: string | null | undefined,
+) {
+  return trimmedName(incoming) ?? trimmedName(existing);
+}
+
+export async function attachSenderDisplayNames(
+  supabase: SupabaseClient,
+  messages: ChatMessage[],
+): Promise<
+  | { ok: true; messages: ChatMessage[] }
+  | { ok: false; error: { code?: string; message?: string } }
+> {
+  const ids = [...new Set(messages.map((message) => message.senderId))];
+  if (ids.length === 0) return { ok: true, messages };
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id, display_name")
+    .in("user_id", ids);
+
+  if (error) return { ok: false, error };
+
+  const names = new Map<string, string>();
+  for (const profile of (data ?? []) as {
+    user_id: string;
+    display_name: string;
+  }[]) {
+    const name = trimmedName(profile.display_name);
+    if (name) names.set(profile.user_id, name);
+  }
+
+  return {
+    ok: true,
+    messages: messages.map((message) => ({
+      ...message,
+      senderDisplayName: names.get(message.senderId) ?? null,
+    })),
   };
 }
 
@@ -39,10 +88,20 @@ export function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
   const next = [...current];
 
   for (const message of incoming) {
-    const sent: ChatMessage = { ...message, status: "sent" };
+    const sent: ChatMessage = {
+      ...message,
+      status: "sent",
+      senderDisplayName: trimmedName(message.senderDisplayName),
+    };
     const byId = next.findIndex((item) => item.id === sent.id);
     if (byId >= 0) {
-      next[byId] = sent;
+      next[byId] = {
+        ...sent,
+        senderDisplayName: keepSenderDisplayName(
+          sent.senderDisplayName,
+          next[byId].senderDisplayName,
+        ),
+      };
       continue;
     }
 
@@ -51,8 +110,15 @@ export function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
         item.clientMessageId === sent.clientMessageId &&
         item.senderId === sent.senderId,
     );
-    if (byClient >= 0) next[byClient] = sent;
-    else next.push(sent);
+    if (byClient >= 0) {
+      next[byClient] = {
+        ...sent,
+        senderDisplayName: keepSenderDisplayName(
+          sent.senderDisplayName,
+          next[byClient].senderDisplayName,
+        ),
+      };
+    } else next.push(sent);
   }
 
   return sortMessages(next);

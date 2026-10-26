@@ -8,7 +8,11 @@ import {
   withApi,
 } from "@/lib/api/http";
 import { requireSession } from "@/lib/api/session";
-import { MESSAGE_PAGE_SIZE, messageFromRow } from "@/lib/chat/messages";
+import {
+  MESSAGE_PAGE_SIZE,
+  attachSenderDisplayNames,
+  messageFromRow,
+} from "@/lib/chat/messages";
 import type { MessageRow } from "@/lib/chat/types";
 import { NextResponse } from "next/server";
 
@@ -82,7 +86,10 @@ export const GET = withApi(async (request, requestId, context) => {
   const rows = ((data ?? []) as MessageRow[]).map(messageFromRow);
   if (descending) rows.reverse();
 
-  return NextResponse.json({ messages: rows });
+  const named = await attachSenderDisplayNames(session.supabase, rows);
+  if (!named.ok) return postgresError(named.error, requestId);
+
+  return NextResponse.json({ messages: named.messages });
 });
 
 export const POST = withApi(async (request, requestId, context) => {
@@ -122,5 +129,10 @@ export const POST = withApi(async (request, requestId, context) => {
   const row = firstRow(data as MessageRow | MessageRow[] | null);
   if (!row?.id) return apiError(500, "50000", "request failed", requestId);
 
-  return NextResponse.json(messageFromRow(row));
+  const named = await attachSenderDisplayNames(session.supabase, [
+    messageFromRow(row),
+  ]);
+  if (!named.ok) return postgresError(named.error, requestId);
+
+  return NextResponse.json(named.messages[0]);
 });
